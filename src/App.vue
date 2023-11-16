@@ -21,7 +21,9 @@ import {
   DeviceSourceManager,
   ActionManager,
   ExecuteCodeAction,
-  AssetContainer
+  AssetContainer,
+  PhysicsAggregate,
+  PhysicsShapeType
 } from "@babylonjs/core";
 import "@babylonjs/loaders/glTF";
 
@@ -57,13 +59,28 @@ const createScene = async function () {
     { width: 10, height: 10 },
     scene
   );
-  
+
+  const ball = MeshBuilder.CreateSphere(scene);
+  ball.position.set(0, 10, 0);
+  // ball.setPosition(0,10,0)
   // initialize the plugin using the HavokPlugin constructor
   // const havokPlugin = HavokPhysics();
   const havokInstance = await HavokPhysics();
   const gravityVector = new Vector3(0, -9.81, 0);
   const physicsPlugin = new HavokPlugin(true, havokInstance);
   scene.enablePhysics(gravityVector, physicsPlugin);
+
+  const groundAggregate = new PhysicsAggregate(
+    ground,
+    PhysicsShapeType.MESH,
+    scene
+  )
+  const ballAggregate = new PhysicsAggregate(
+    ball,
+    PhysicsShapeType.SPHERE,
+    { mass: 1, restitution: 0.25 },
+    scene
+  );
   // 加载gltf模型
   SceneLoader.Append("models/", "Xbot.glb", scene, (gltf) => {
     console.log(gltf);
@@ -72,93 +89,87 @@ const createScene = async function () {
   const inputMap = {};
   scene.actionManager = new ActionManager(scene);
   scene.actionManager.registerAction(
-    new ExecuteCodeAction(
-      ActionManager.OnKeyDownTrigger,
-      function (evt) {
-        inputMap[evt.sourceEvent.key] = evt.sourceEvent.type == "keydown";
-      }
-    )
+    new ExecuteCodeAction(ActionManager.OnKeyDownTrigger, function (evt) {
+      inputMap[evt.sourceEvent.key] = evt.sourceEvent.type == "keydown";
+    })
   );
   scene.actionManager.registerAction(
-    new ExecuteCodeAction(
-      ActionManager.OnKeyUpTrigger,
-      function (evt) {
-        inputMap[evt.sourceEvent.key] = evt.sourceEvent.type == "keydown";
-      }
-    )
+    new ExecuteCodeAction(ActionManager.OnKeyUpTrigger, function (evt) {
+      inputMap[evt.sourceEvent.key] = evt.sourceEvent.type == "keydown";
+    })
   );
 
-  function initPlayer() {
-        let meshContent = AssetContainer;
-        const boxHelper = MeshBuilder.CreateBox('lbl', { height: 3.2 }, this.scene);
-        boxHelper.visibility = 0;
-        boxHelper.position.y = 3;
-        container.animationGroups.forEach((item, index) => {
-            item.play(true);
-            if (index === AnimationKey.Idle) {
-                item.setWeightForAllAnimatables(1);
-            } else {
-                item.setWeightForAllAnimatables(0);
-            }
-        });
-        const player = MeshBuilder.CreateCapsule(
-            'lbl',
-            { height: 3.6, radius: 0.5 },
-            this.scene
-        );
-        player.visibility = 0;
-        const [mesheRoot] = container.meshes;
-        mesheRoot.position.y = 1.17;
-        mesheRoot.position.y = 18 - 1.8;
-        mesheRoot.position.z = -5;
-        player.checkCollisions = true;
-        mesheRoot.scaling = new BABYLON.Vector3(2, 2, 2);
-        player.position.y = 18;
-        player.position.z = -5;
-        player.addChild(mesheRoot);
-        this.player = player;
+  //   function initPlayer() {
+  //         let meshContent = AssetContainer;
+  //         const boxHelper = MeshBuilder.CreateBox('lbl', { height: 3.2 }, this.scene);
+  //         boxHelper.visibility = 0;
+  //         boxHelper.position.y = 3;
+  //         container.animationGroups.forEach((item, index) => {
+  //             item.play(true);
+  //             if (index === AnimationKey.Idle) {
+  //                 item.setWeightForAllAnimatables(1);
+  //             } else {
+  //                 item.setWeightForAllAnimatables(0);
+  //             }
+  //         });
+  //         const player = MeshBuilder.CreateCapsule(
+  //             'lbl',
+  //             { height: 3.6, radius: 0.5 },
+  //             this.scene
+  //         );
+  //         player.visibility = 0;
+  //         const [mesheRoot] = container.meshes;
+  //         mesheRoot.position.y = 1.17;
+  //         mesheRoot.position.y = 18 - 1.8;
+  //         mesheRoot.position.z = -5;
+  //         player.checkCollisions = true;
+  //         mesheRoot.scaling = new BABYLON.Vector3(2, 2, 2);
+  //         player.position.y = 18;
+  //         player.position.z = -5;
+  //         player.addChild(mesheRoot);
+  //         this.player = player;
 
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        this.playerFeetRay = new BABYLON.Ray();
-        const rayHelper = new BABYLON.RayHelper(this.playerFeetRay);
-        rayHelper.attachToMesh(mesheRoot, new BABYLON.Vector3(0, -1, 0), undefined, 0.1);
-        rayHelper.show(this.scene); // 脚底光线
+  //         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  //         // @ts-ignore
+  //         this.playerFeetRay = new BABYLON.Ray();
+  //         const rayHelper = new BABYLON.RayHelper(this.playerFeetRay);
+  //         rayHelper.attachToMesh(mesheRoot, new BABYLON.Vector3(0, -1, 0), undefined, 0.1);
+  //         rayHelper.show(this.scene); // 脚底光线
 
-        const aggregate = new BABYLON.PhysicsAggregate(
-            player,
-            BABYLON.PhysicsShapeType.CAPSULE,
-            { mass: 1, friction: 0.5, restitution: 0 },
-            this.scene
-        );
+  //         const aggregate = new BABYLON.PhysicsAggregate(
+  //             player,
+  //             BABYLON.PhysicsShapeType.CAPSULE,
+  //             { mass: 1, friction: 0.5, restitution: 0 },
+  //             this.scene
+  //         );
 
-        aggregate.body.setMotionType(BABYLON.PhysicsMotionType.DYNAMIC);
-        aggregate.body.disablePreStep = false;
-        aggregate.body.setMassProperties({
-            inertia: new BABYLON.Vector3(0, 0, 0),
-        });
-        this.camera.setTarget(player);
-    }
+  //         aggregate.body.setMotionType(BABYLON.PhysicsMotionType.DYNAMIC);
+  //         aggregate.body.disablePreStep = false;
+  //         aggregate.body.setMassProperties({
+  //             inertia: new BABYLON.Vector3(0, 0, 0),
+  //         });
+  //         this.camera.setTarget(player);
+  //     }
 
-  if (inputMap["w"]) {
-  hero.moveWithCollisions(hero.forward.scaleInPlace(heroSpeed));
-  keydown = true;
-}
-if (inputMap["s"]) {
-  hero.moveWithCollisions(hero.forward.scaleInPlace(-heroSpeedBackwards));
-  keydown = true;
-}
-if (inputMap["a"]) {
-  hero.rotate(Vector3.Up(), -heroRotationSpeed);
-  keydown = true;
-}
-if (inputMap["d"]) {
-  hero.rotate(Vector3.Up(), heroRotationSpeed);
-  keydown = true;
-}
-if (inputMap["b"]) {
-  keydown = true;
-}
+  //   if (inputMap["w"]) {
+  //   hero.moveWithCollisions(hero.forward.scaleInPlace(heroSpeed));
+  //   keydown = true;
+  // }
+  // if (inputMap["s"]) {
+  //   hero.moveWithCollisions(hero.forward.scaleInPlace(-heroSpeedBackwards));
+  //   keydown = true;
+  // }
+  // if (inputMap["a"]) {
+  //   hero.rotate(Vector3.Up(), -heroRotationSpeed);
+  //   keydown = true;
+  // }
+  // if (inputMap["d"]) {
+  //   hero.rotate(Vector3.Up(), heroRotationSpeed);
+  //   keydown = true;
+  // }
+  // if (inputMap["b"]) {
+  //   keydown = true;
+  // }
   return scene;
 };
 
